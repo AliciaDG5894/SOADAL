@@ -21,17 +21,14 @@ app.config(function ($routeProvider, $locationProvider) {
         templateUrl: "/productos",
         controller: "productosCtrl"
     })
-
-
-
+    .when("/trajes", {
+        templateUrl: "/trajes",
+        controller: "trajesCtrl"
+    })
     .when("/decoraciones", {
         templateUrl: "/decoraciones",
         controller: "decoracionesCtrl"
     })
-
-
-
-
     .otherwise({
         redirectTo: "/"
     })
@@ -135,7 +132,65 @@ app.controller("productosCtrl", function ($scope, $http) {
         })
     })
 })
+app.controller("trajesCtrl", function ($scope, $http) {
+    function buscarTrajes() {
+        $.get("/tbodyTrajes", function (trsHTML) {
+            $("#tbodyTrajes").html(trsHTML)
+        })
+    }
 
+    buscarTrajes()
+    
+    Pusher.logToConsole = true
+
+    var pusher = new Pusher("1007852abe277cd3e121", {
+      cluster: "us2"
+    })
+
+    var channel = pusher.subscribe("canalTrajes")
+    channel.bind("eventoTrajes", function(data) {
+        // alert(JSON.stringify(data))
+        buscarTrajes()
+    })
+
+    $scope.guardarTraje = function() {
+        $http.post("/trajes/guardar", {
+            txtNombre: $scope.txtNombre,
+            txtDescripcion: $scope.txtDescripcion
+        }).then(function(respuesta) {
+            alert(respuesta.data.mensaje);
+            $scope.txtNombre = "";
+            $scope.txtDescripcion = "";
+            buscarTrajes();
+        }, function(error) {
+            console.error(error);
+        });
+    };
+
+    $(document).on("click", "#tbodyTrajes .btn-eliminar", function(){
+        const id = $(this).data("id");
+        if(confirm("¿Deseas eliminar este traje?")) {
+            $.post("/trajes/eliminar", {id: id}, function(response){
+                console.log("Traje eliminado correctamente");
+                 buscarTrajes()
+            }).fail(function(xhr){
+                console.error("Error al eliminar cliente:", xhr.responseText);
+            });
+        }
+    });
+
+    $(document).on("click", ".btn-ingredientes", function (event) {
+        const id = $(this).data("id")
+
+        $.get(`/productos/ingredientes/${id}`, function (html) {
+            modal(html, "Ingredientes", [
+                {html: "Aceptar", class: "btn btn-secondary", fun: function (event) {
+                    closeModal()
+                }}
+            ])
+        })
+    })
+})
 
 
 app.controller("decoracionesCtrl", function ($scope, $http) {
@@ -191,3 +246,4 @@ document.addEventListener("DOMContentLoaded", function (event) {
 
     activeMenuOption(location.hash)
 })
+
